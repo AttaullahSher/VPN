@@ -17,8 +17,8 @@ Peer names to create: `atta-iphone`, `atta-laptop`, `peer3`, `peer4`.
 | Oracle account | ✅ created |
 | Home region | ✅ `me-abudhabi-1` (UAE Central, Abu Dhabi) — **cannot be changed** |
 | VCN + public subnet | ✅ created via the VCN wizard |
-| Compute instance | ⏳ **launch loop running in Cloud Shell** — repeatedly hitting "Out of host capacity", which is normal for free Ampere |
-| Security list ingress | ⏳ UDP 51820 + TCP 443 — run `oracle/cloudshell-open-ports.sh` |
+| Compute instance | ⏳ **launch loop running in Cloud Shell** under tmux session `wg`, logging to `~/wg/launch.log`. Repeatedly hitting "Out of host capacity", which is normal for free Ampere. This is the only outstanding blocker. |
+| Security list ingress | ✅ UDP 51820 + TCP 443 open on the default security list |
 | Phase 2 (server setup) | ⬜ not started — needs the public IP |
 | Phase 3 (peers) | ⬜ not started |
 | Phase 4 (verify) | ⬜ not started |
@@ -72,10 +72,16 @@ Two public keys should be in the instance's `ssh_authorized_keys` metadata:
 
 1. `claude-setup` — belongs to the original ephemeral setup container. **Assume
    this key is gone.** Do not depend on it.
-2. The owner's own key, generated on their machine. This is the one that matters.
+2. `sales@Admin` — the owner's own key, at `~/.ssh/oracle_wg` on their Windows
+   machine. Fingerprint `SHA256:LLfIij8wj0wHEvqd9JSgyoAwhWBAr3YkXjXBTfCX25s`.
+   **This is the one to use.**
 
-If the instance was launched with only key 1 and that container is gone, there is
-no way in: terminate the instance and relaunch with the correct key.
+Both are already in `~/wg/key.pub` in Cloud Shell and baked into `~/wg/md.json`,
+so the instance will accept both the moment it launches.
+
+Connect with:
+
+    ssh -i $HOME\.ssh\oracle_wg ubuntu@<PUBLIC_IP>
 
 ## Next steps, in order
 
