@@ -1,19 +1,21 @@
 # Phase 1 — Oracle console (you click, on the phone)
 
-## Region recommendation
+## Region
 
-**Pick `me-dubai-1` (UAE — Dubai) as your home region.**
+Either UAE region is a good outcome:
 
-- ~5–10 ms from Abu Dhabi. The Abu Dhabi region (`me-abudhabi-1`) is a couple of
-  milliseconds closer, which you will never feel.
-- Dubai is the larger and longer-established of the two UAE regions, so it has
-  more Ampere A1 hardware — and Ampere capacity, not latency, is what actually
-  decides whether this project works.
-- Both UAE regions are far less contended for free-tier A1 than Frankfurt,
-  Amsterdam, Phoenix or Ashburn, where free A1 is effectively permanently gone.
+| Region | Latency from Abu Dhabi | Notes |
+|---|---|---|
+| `me-abudhabi-1` (UAE Central) | ~2-5 ms | Lowest possible. Smaller region, so less total Ampere hardware. |
+| `me-dubai-1` (UAE East) | ~5-10 ms | Larger, longer-established, more A1 racks. |
 
-> **The home region cannot be changed after signup.** Not by support, not by
-> re-verifying. Choose it deliberately on the signup form.
+The difference is a few milliseconds you will never perceive. Both are far less
+contended for free-tier Ampere than Frankfurt, Amsterdam, Phoenix or Ashburn,
+where free A1 is effectively permanently gone.
+
+> **The home region cannot be changed after signup.** If Ampere capacity is
+> tight in your region, the answer is the retry loop or a Pay As You Go upgrade
+> (see below) - never a region change, because that is not available to you.
 
 ## Account limits worth knowing
 

@@ -17,7 +17,7 @@ you explicitly ask it to.
 | `server/peer.sh` | Phase 3. `add` / `list` / `qr` / `png` / `conf` / `revoke`. |
 | `server/verify.sh` | Phase 4. Handshakes, firewall ordering, DNS, MTU, throughput. |
 | `server/egress.sh` | Month-to-date egress vs the 10 TB free cap. |
-| `docs/` | Phase 1 console walkthrough and troubleshooting. |
+| `docs/` | Phase 1 console walkthrough, field-by-field instance creation, troubleshooting. |
 
 ## Design decisions
 
