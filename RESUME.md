@@ -17,14 +17,32 @@ Peer names to create: `atta-iphone`, `atta-laptop`, `peer3`, `peer4`.
 | Oracle account | ✅ created |
 | Home region | ✅ `me-abudhabi-1` (UAE Central, Abu Dhabi) — **cannot be changed** |
 | VCN + public subnet | ✅ created via the VCN wizard |
-| Compute instance | ⏳ **launch loop running in Cloud Shell** under tmux session `wg`, logging to `~/wg/launch.log`. Repeatedly hitting "Out of host capacity", which is normal for free Ampere. This is the only outstanding blocker. |
-| Security list ingress | ✅ UDP 51820 + TCP 443 open on the default security list |
+| Compute instance | ⏳ **launch loop running in Cloud Shell** under tmux session `wg`, script `~/wg/launch.sh`, logging to `~/wg/launch.log`. Repeatedly hitting "Out of host capacity", which is normal for free Ampere. This is the only outstanding blocker. |
+| Security list ingress | ✅ TCP 22 + TCP 443 + UDP 51820 + ICMP, all from `0.0.0.0/0`, on the **public** subnet's security list — verified 2026-08-17 |
+| Launch loop target | ✅ verified against the live process: public subnet, `--assign-public-ip true`, 1 OCPU / 6 GB, AD-1, metadata carrying the owner's key |
 | Phase 2 (server setup) | ⬜ not started — needs the public IP |
 | Phase 3 (peers) | ⬜ not started |
 | Phase 4 (verify) | ⬜ not started |
 
 Availability domain is `pMOH:ME-ABUDHABI-1-AD-1` (Abu Dhabi has exactly one, so
 there is no second AD to try).
+
+## Network facts (verified 2026-08-17)
+
+The VCN wizard created **two** subnets. Anything that resolves a subnet with
+`data[0]` is making an unchecked bet on ordering — confirm it landed on the
+public one before trusting it.
+
+| | OCID prefix | CIDR | `prohibit-public-ip-on-vnic` |
+|---|---|---|---|
+| **public subnet-vpn-vcn** ← use this | `...aaaaaaaax4nhwrkx` | `10.0.0.0/24` | `false` |
+| private subnet-vpn-vcn | `...aaaaaaaa5sjgz7fh` | `10.0.1.0/24` | `true` |
+
+Public subnet route table: `0.0.0.0/0` → `ocid1.internetgateway...aaaaaaaa36zedlsp`.
+
+Public subnet ingress: TCP 22, TCP 443, UDP 51820 (all `0.0.0.0/0`), plus ICMP.
+The private subnet only permits TCP 22 from `10.0.0.0/16`, which is fine — the
+instance never goes there.
 
 ## Owner's working preferences
 
@@ -42,18 +60,34 @@ there is no second AD to try).
 but Ampere capacity in Abu Dhabi kept refusing, so the owner opted down. This is
 not a compromise worth undoing: free A1 gives 1 Gbit/s of network per OCPU and
 WireGuard is kernel-space, so 1 OCPU is already a full-gigabit tunnel for four
-people — far beyond any home or mobile uplink. Resizable to 2 OCPU later from
-the console with a stop/start, keeping the same IP and disk.
+people — far beyond any home or mobile uplink.
+
+**Do not resize, and never press Stop.** Capacity is checked only at launch and
+at start. A console *Stop* releases the physical host slot, and starting again
+re-enters the same Ampere lottery that is currently taking hours — in a
+single-AD region, that can mean losing the instance for good. Resizing requires
+a stop/start, so it carries the same risk and is not worth 1 extra OCPU nobody
+will use. An OS-level `sudo reboot` is safe: it keeps the host slot, which is
+why `unattended-upgrades` is allowed to reboot for kernel updates at 04:30.
 
 Note for `setup.sh`: the memory ballast takes 30% of RAM, so on 6 GB that is
 ~1.8 GB, still comfortably over Oracle's 20% idle threshold. No change needed.
 
-**SSH on port 443** — the cloud-init payload adds a second SSH port. This exists
+**SSH on port 443** — the cloud-init payload adds a second SSH port. This existed
 only because the original setup host was firewalled to outbound 80/443 and could
-not use port 22. **A local session on the owner's own machine can use port 22
-normally and does not need this.** It is harmless to leave, and removable by
-deleting `/etc/ssh/sshd_config.d/99-alt-port.conf` and the matching
+not use port 22. **The owner connects from their own Windows PC on port 22.
+Ignore the 443 workaround.** It is harmless to leave as a fallback, and
+removable by deleting `/etc/ssh/sshd_config.d/99-alt-port.conf` and the matching
 `ssh.socket.d` drop-in.
+
+**Launch script never overwrites `key.pub`** — an earlier version of
+`oracle/cloudshell-launch-retry.sh` wrote a hardcoded `claude-setup` public key
+over `key.pub` every run. That key's private half is gone, so restarting the
+loop with it would have launched an instance nobody could log in to, and the
+only remedy would be terminating it and re-queueing for Ampere capacity. The
+script now reuses an existing `key.pub`, refuses to run without one, and prints
+the fingerprints it is about to authorise. Its defaults are also 1 OCPU / 6 GB,
+matching the shape actually being requested, and its work directory is `~/wg`.
 
 **Tunnel** — `10.66.66.0/24` + `fd42:66:66::/64`, UDP 51820, MTU 1420, TCP MSS
 clamped to path MTU.

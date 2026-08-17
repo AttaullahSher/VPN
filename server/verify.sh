@@ -136,7 +136,7 @@ echo "     downloading 100 MB from Cloudflare, please wait..."
 spd="$(curl -s -o /dev/null -m 60 -w '%{speed_download}' https://speed.cloudflare.com/__down?bytes=100000000 2>/dev/null)"
 if [ -n "$spd" ] && [ "${spd%%.*}" -gt 0 ] 2>/dev/null; then
   ok "server downlink: $(awk -v s="$spd" 'BEGIN{printf "%.1f Mbit/s", s*8/1000000}')"
-  echo "     (an Always Free A1 gets 1 Gbit/s per OCPU; 2 OCPU = 2 Gbit/s ceiling)"
+  echo "     (an Always Free A1 gets ~1 Gbit/s per OCPU; this shape has $(nproc) -> ~$(nproc) Gbit/s ceiling)"
 else
   warn "throughput test failed"
 fi

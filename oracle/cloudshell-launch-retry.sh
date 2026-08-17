@@ -10,25 +10,51 @@
 # Start VCN Wizard -> "VCN with Internet Connectivity").
 #
 #   bash cloudshell-launch-retry.sh
-#   OCPUS=1 MEMGB=6 bash cloudshell-launch-retry.sh    # smaller, lands sooner
+#   OCPUS=2 MEMGB=12 bash cloudshell-launch-retry.sh   # bigger, lands less often
 # =============================================================================
 set -uo pipefail
 
 C="${OCI_TENANCY:?not running inside OCI Cloud Shell}"
 NAME="${NAME:-wg-vpn}"
-OCPUS="${OCPUS:-2}"
-MEMGB="${MEMGB:-12}"
-SLEEP="${SLEEP:-60}"
-WORK="$HOME/wg-launch"
+OCPUS="${OCPUS:-1}"
+MEMGB="${MEMGB:-6}"
+WORK="${WORK:-$HOME/wg}"
 mkdir -p "$WORK"; cd "$WORK"
 
-# --- the SSH public key that the setup host will connect with ---
-cat > key.pub <<'KEY_EOF'
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINZOq7gwxznX1mnwaZc4WWS4DyYWWWYLiT1dhptJHF0D claude-setup
-KEY_EOF
+# --- the SSH public keys that will be authorised on the instance ---
+# NEVER overwrite an existing key.pub. Whoever seeded it put the key they
+# actually hold the private half of in there; replacing it would launch an
+# instance that nobody can log in to, and the only fix is to destroy and
+# relaunch - which means queueing for scarce Ampere capacity all over again.
+if [ ! -s key.pub ]; then
+  if [ -n "${KEYFILE:-}" ] && [ -s "$KEYFILE" ]; then
+    cp "$KEYFILE" key.pub
+  else
+    cat >&2 <<MSG
+!! $WORK/key.pub is missing or empty, and no KEYFILE was given.
 
-# --- first-boot config: add SSH on 443 (the setup host cannot use port 22) ---
-cat > bootstrap.yaml <<'CI_EOF'
+   Put YOUR OWN SSH public key there first - the one whose private half is on
+   the machine you will SSH from:
+
+     cat > $WORK/key.pub <<'EOF'
+     ssh-ed25519 AAAA...your key... you@your-pc
+     EOF
+
+   Launching without it creates an instance you cannot get into.
+MSG
+    exit 1
+  fi
+fi
+
+echo "==> these keys will be authorised on the instance:"
+ssh-keygen -l -f key.pub 2>/dev/null | sed 's/^/    /' \
+  || { echo "!! key.pub is not a valid SSH public key file"; exit 1; }
+echo "    ^ at least one of these fingerprints must be a key YOU hold."
+echo
+
+# --- first-boot config: add SSH on 443 as a fallback path in ---
+# Harmless if unused. Written only if absent, so a hand-edited one survives.
+[ -s bootstrap.yaml ] || cat > bootstrap.yaml <<'CI_EOF'
 #cloud-config
 write_files:
   - path: /etc/systemd/system/ssh.socket.d/99-alt-port.conf

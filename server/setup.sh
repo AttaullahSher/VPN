@@ -127,7 +127,11 @@ log "3/9  SSH hardening + fail2ban"
 # that would lock everyone out permanently.
 KEYCOUNT=0
 for f in /home/*/.ssh/authorized_keys /root/.ssh/authorized_keys; do
-  [ -f "$f" ] && KEYCOUNT=$(( KEYCOUNT + $(grep -cvE '^\s*(#|$)' "$f" || echo 0) ))
+  [ -f "$f" ] || continue
+  # grep -c prints 0 and exits 1 when there are no matches; swallow the status
+  # so neither the arithmetic nor "set -e" trips on an empty authorized_keys.
+  n="$(grep -cvE '^[[:space:]]*(#|$)' "$f" 2>/dev/null || true)"
+  KEYCOUNT=$(( KEYCOUNT + ${n:-0} ))
 done
 [ "$KEYCOUNT" -gt 0 ] || die "no authorized_keys found anywhere - refusing to disable password login (you would be locked out)"
 info "found $KEYCOUNT authorized SSH key(s) - safe to disable password login"
