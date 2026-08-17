@@ -1,0 +1,6 @@
+# Never commit generated peer material.
+peers/
+*.key
+*.conf
+!examples/*.conf
+*.png

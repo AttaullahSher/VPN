@@ -1,0 +1,42 @@
+#cloud-config
+# ---------------------------------------------------------------------------
+# Paste this into the "Cloud-init script" box when creating the OCI instance.
+#
+# It does exactly ONE thing: makes the SSH daemon also listen on TCP/443,
+# and opens 443 in the instance's local iptables.
+#
+# Why: the machine that runs the rest of the setup can only make outbound
+# connections on ports 80 and 443. Port 22 is blocked for it. Adding 443 as a
+# second SSH port is the smallest possible change that makes remote setup
+# possible. Port 22 keeps working normally for you.
+#
+# Nothing else is configured here. WireGuard, hardening and the firewall are
+# installed later by server/setup.sh, so you can review each step.
+# ---------------------------------------------------------------------------
+
+write_files:
+  # Ubuntu 24.04 starts sshd via socket activation (ssh.socket), so the extra
+  # port must be declared on the socket unit, not just in sshd_config.
+  - path: /etc/systemd/system/ssh.socket.d/99-alt-port.conf
+    permissions: '0644'
+    content: |
+      [Socket]
+      ListenStream=
+      ListenStream=22
+      ListenStream=443
+
+  # Fallback for images that run sshd as a classic (non socket-activated) service.
+  - path: /etc/ssh/sshd_config.d/99-alt-port.conf
+    permissions: '0644'
+    content: |
+      Port 22
+      Port 443
+
+runcmd:
+  # Oracle's Ubuntu image ships an iptables ruleset ending in a blanket REJECT.
+  # Insert an ACCEPT for 443 at the top of INPUT so it is evaluated first.
+  - [ sh, -c, "iptables -C INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT" ]
+  - [ sh, -c, "netfilter-persistent save || true" ]
+  - [ systemctl, daemon-reload ]
+  - [ sh, -c, "systemctl restart ssh.socket 2>/dev/null || systemctl restart ssh || true" ]
+  - [ sh, -c, "systemctl restart ssh 2>/dev/null || true" ]
