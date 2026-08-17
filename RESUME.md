@@ -48,12 +48,21 @@ the console with a stop/start, keeping the same IP and disk.
 Note for `setup.sh`: the memory ballast takes 30% of RAM, so on 6 GB that is
 ~1.8 GB, still comfortably over Oracle's 20% idle threshold. No change needed.
 
-**SSH on port 443** — the cloud-init payload adds a second SSH port. This exists
+**SSH on port 443** — the cloud-init payload adds a second SSH port. This existed
 only because the original setup host was firewalled to outbound 80/443 and could
-not use port 22. **A local session on the owner's own machine can use port 22
-normally and does not need this.** It is harmless to leave, and removable by
-deleting `/etc/ssh/sshd_config.d/99-alt-port.conf` and the matching
+not use port 22. **The owner connects from their own Windows PC on port 22.
+Ignore the 443 workaround.** It is harmless to leave as a fallback, and
+removable by deleting `/etc/ssh/sshd_config.d/99-alt-port.conf` and the matching
 `ssh.socket.d` drop-in.
+
+**Launch script never overwrites `key.pub`** — an earlier version of
+`oracle/cloudshell-launch-retry.sh` wrote a hardcoded `claude-setup` public key
+over `key.pub` every run. That key's private half is gone, so restarting the
+loop with it would have launched an instance nobody could log in to, and the
+only remedy would be terminating it and re-queueing for Ampere capacity. The
+script now reuses an existing `key.pub`, refuses to run without one, and prints
+the fingerprints it is about to authorise. Its defaults are also 1 OCPU / 6 GB,
+matching the shape actually being requested, and its work directory is `~/wg`.
 
 **Tunnel** — `10.66.66.0/24` + `fd42:66:66::/64`, UDP 51820, MTU 1420, TCP MSS
 clamped to path MTU.
