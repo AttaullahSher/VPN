@@ -147,6 +147,19 @@ Connect with:
   reset on a normal capacity answer).
 - Cloud Shell disconnects after ~20 minutes idle and kills foreground jobs. Run
   the loop under `tmux` (`tmux new -d -s wg …`, reattach with `tmux attach -t wg`).
+- **tmux is not enough.** Cloud Shell reclaims and rebuilds the whole machine
+  when the browser tab is left long enough — overnight is plenty. That kills the
+  tmux server outright; the home directory survives, so `launch.log` is still
+  there and looks fine at a glance. Observed on 2026-08-17: the loop died
+  mid-attempt at 03:35 and was not noticed until 20:15, costing ~17 hours of
+  attempts. **Always compare the log's last timestamp against `date` in the same
+  shell** — a stale tail is indistinguishable from a live one otherwise. A bare
+  `tmux ls` that errors with "no such file or directory" means the machine was
+  rebuilt, not that the session merely detached.
+- Because of the above, an unattended overnight queue is not achievable from
+  Cloud Shell alone. Upgrading to Pay As You Go is the real fix: it moves the
+  account out of the bottom-priority capacity queue, and Always Free allowances
+  still apply, so a 1 OCPU / 6 GB A1 stays free.
 - Oracle's Ubuntu image ends INPUT and FORWARD in
   `REJECT --reject-with icmp-host-prohibited`. Opening the VCN security list is
   not sufficient — rules must be **inserted at the head** of the chain. Presence
