@@ -6,6 +6,7 @@ A four-person family VPN on an Oracle Cloud `VM.Standard.A1.Flex` ARM instance
 Everything here is scripted and idempotent. Nothing prints a private key unless
 you explicitly ask it to.
 
+**Continuing in a new session? Paste the prompt in [`RESUME_PROMPT.md`](RESUME_PROMPT.md).**
 **Picking this up mid-project? Read [`RESUME.md`](RESUME.md) first** — it records
 what is done, what is pending, and every decision made so far.
 
