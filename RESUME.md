@@ -17,14 +17,32 @@ Peer names to create: `atta-iphone`, `atta-laptop`, `peer3`, `peer4`.
 | Oracle account | ✅ created |
 | Home region | ✅ `me-abudhabi-1` (UAE Central, Abu Dhabi) — **cannot be changed** |
 | VCN + public subnet | ✅ created via the VCN wizard |
-| Compute instance | ⏳ **launch loop running in Cloud Shell** under tmux session `wg`, logging to `~/wg/launch.log`. Repeatedly hitting "Out of host capacity", which is normal for free Ampere. This is the only outstanding blocker. |
-| Security list ingress | ✅ UDP 51820 + TCP 443 open on the default security list |
+| Compute instance | ⏳ **launch loop running in Cloud Shell** under tmux session `wg`, script `~/wg/launch.sh`, logging to `~/wg/launch.log`. Repeatedly hitting "Out of host capacity", which is normal for free Ampere. This is the only outstanding blocker. |
+| Security list ingress | ✅ TCP 22 + TCP 443 + UDP 51820 + ICMP, all from `0.0.0.0/0`, on the **public** subnet's security list — verified 2026-08-17 |
+| Launch loop target | ✅ verified against the live process: public subnet, `--assign-public-ip true`, 1 OCPU / 6 GB, AD-1, metadata carrying the owner's key |
 | Phase 2 (server setup) | ⬜ not started — needs the public IP |
 | Phase 3 (peers) | ⬜ not started |
 | Phase 4 (verify) | ⬜ not started |
 
 Availability domain is `pMOH:ME-ABUDHABI-1-AD-1` (Abu Dhabi has exactly one, so
 there is no second AD to try).
+
+## Network facts (verified 2026-08-17)
+
+The VCN wizard created **two** subnets. Anything that resolves a subnet with
+`data[0]` is making an unchecked bet on ordering — confirm it landed on the
+public one before trusting it.
+
+| | OCID prefix | CIDR | `prohibit-public-ip-on-vnic` |
+|---|---|---|---|
+| **public subnet-vpn-vcn** ← use this | `...aaaaaaaax4nhwrkx` | `10.0.0.0/24` | `false` |
+| private subnet-vpn-vcn | `...aaaaaaaa5sjgz7fh` | `10.0.1.0/24` | `true` |
+
+Public subnet route table: `0.0.0.0/0` → `ocid1.internetgateway...aaaaaaaa36zedlsp`.
+
+Public subnet ingress: TCP 22, TCP 443, UDP 51820 (all `0.0.0.0/0`), plus ICMP.
+The private subnet only permits TCP 22 from `10.0.0.0/16`, which is fine — the
+instance never goes there.
 
 ## Owner's working preferences
 
