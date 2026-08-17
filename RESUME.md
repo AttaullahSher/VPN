@@ -60,8 +60,15 @@ instance never goes there.
 but Ampere capacity in Abu Dhabi kept refusing, so the owner opted down. This is
 not a compromise worth undoing: free A1 gives 1 Gbit/s of network per OCPU and
 WireGuard is kernel-space, so 1 OCPU is already a full-gigabit tunnel for four
-people — far beyond any home or mobile uplink. Resizable to 2 OCPU later from
-the console with a stop/start, keeping the same IP and disk.
+people — far beyond any home or mobile uplink.
+
+**Do not resize, and never press Stop.** Capacity is checked only at launch and
+at start. A console *Stop* releases the physical host slot, and starting again
+re-enters the same Ampere lottery that is currently taking hours — in a
+single-AD region, that can mean losing the instance for good. Resizing requires
+a stop/start, so it carries the same risk and is not worth 1 extra OCPU nobody
+will use. An OS-level `sudo reboot` is safe: it keeps the host slot, which is
+why `unattended-upgrades` is allowed to reboot for kernel updates at 04:30.
 
 Note for `setup.sh`: the memory ballast takes 30% of RAM, so on 6 GB that is
 ~1.8 GB, still comfortably over Oracle's 20% idle threshold. No change needed.
