@@ -38,10 +38,15 @@ there is no second AD to try).
 
 **Region** — Abu Dhabi. ~2–5 ms latency. Chosen; not revisitable.
 
-**Shape** — `VM.Standard.A1.Flex`, 2 OCPU / 12 GB. If capacity keeps failing,
-drop to 1 OCPU / 6 GB: free A1 gives 1 Gbit/s of network per OCPU and WireGuard
-is kernel-space, so 1 OCPU is a full-gigabit tunnel for four people. Resizable
-later from the console with a stop/start, keeping the same IP and disk.
+**Shape** — `VM.Standard.A1.Flex`, **1 OCPU / 6 GB**. Started at 2 OCPU / 12 GB
+but Ampere capacity in Abu Dhabi kept refusing, so the owner opted down. This is
+not a compromise worth undoing: free A1 gives 1 Gbit/s of network per OCPU and
+WireGuard is kernel-space, so 1 OCPU is already a full-gigabit tunnel for four
+people — far beyond any home or mobile uplink. Resizable to 2 OCPU later from
+the console with a stop/start, keeping the same IP and disk.
+
+Note for `setup.sh`: the memory ballast takes 30% of RAM, so on 6 GB that is
+~1.8 GB, still comfortably over Oracle's 20% idle threshold. No change needed.
 
 **SSH on port 443** — the cloud-init payload adds a second SSH port. This exists
 only because the original setup host was firewalled to outbound 80/443 and could
