@@ -90,6 +90,10 @@ echo "    Leave this tab open. Ctrl-C to stop."
 echo
 
 ATTEMPT=0
+BASE="${BASE:-90}"        # seconds between ordinary capacity retries
+BACKOFF="$BASE"           # grows when Oracle rate-limits us
+MAXBACKOFF=900
+
 while :; do
   for AD in "${ADS[@]}"; do
     ATTEMPT=$((ATTEMPT+1))
@@ -108,10 +112,7 @@ while :; do
 
     if printf '%s' "$OUT" | grep -q '"lifecycle-state": *"RUNNING"'; then
       echo "SUCCESS"
-      ID="$(printf '%s' "$OUT" | python3 -c 'import sys,json,re
-t=sys.stdin.read()
-m=re.search(r"\"id\":\s*\"(ocid1\.instance[^\"]+)\"",t)
-print(m.group(1) if m else "")')"
+      ID="$(printf '%s' "$OUT" | grep -o '"id": *"ocid1\.instance[^"]*"' | head -1 | cut -d'"' -f4)"
       IP="$(oci compute instance list-vnics --instance-id "$ID" 2>/dev/null \
             | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print(d[0].get("public-ip",""))')"
       echo
@@ -124,13 +125,26 @@ print(m.group(1) if m else "")')"
       exit 0
     fi
 
-    if printf '%s' "$OUT" | grep -qiE 'out of host capacity|LimitExceeded|InternalError|TooManyRequests'; then
-      echo "no capacity"
-    else
-      echo "FAILED - this is not a capacity error:"
-      printf '%s\n' "$OUT" | tail -25
-      exit 1
+    # 429. Oracle throttles launch_instance per user, and retrying through a
+    # throttle makes it worse - so back off exponentially and reset once a
+    # normal capacity answer comes back.
+    if printf '%s' "$OUT" | grep -qi 'TooManyRequests\|"status": *429'; then
+      BACKOFF=$(( BACKOFF * 2 ))
+      [ "$BACKOFF" -gt "$MAXBACKOFF" ] && BACKOFF="$MAXBACKOFF"
+      echo "rate limited - backing off ${BACKOFF}s"
+      sleep "$BACKOFF"
+      continue
     fi
+
+    if printf '%s' "$OUT" | grep -qiE 'out of host capacity|LimitExceeded|InternalError|ServiceUnavailable'; then
+      BACKOFF="$BASE"
+      echo "no capacity"
+      sleep "$BASE"
+      continue
+    fi
+
+    echo "FAILED - this is not a capacity or throttling error:"
+    printf '%s\n' "$OUT" | tail -25
+    exit 1
   done
-  sleep "$SLEEP"
 done
