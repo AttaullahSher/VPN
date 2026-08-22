@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Private WireGuard VPN on Oracle Cloud Always Free</title>
+<meta name="description" content="A scripted, idempotent four-person WireGuard VPN on an Oracle Cloud Always Free ARM instance.">
+<style>
+  :root {
+    --bg: #f7f8f7;
+    --surface: #ffffff;
+    --border: #dfe3e0;
+    --text: #16201c;
+    --muted: #5c6b64;
+    --accent: #0f7a5a;
+    --accent-soft: #e6f4ee;
+    --code-bg: #f0f2f1;
+    --shadow: 0 1px 2px rgba(16, 32, 28, .06), 0 8px 24px rgba(16, 32, 28, .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1412;
+      --surface: #161d1a;
+      --border: #26302c;
+      --text: #e6ece9;
+      --muted: #94a49c;
+      --accent: #4ecfa1;
+      --accent-soft: #16302768;
+      --code-bg: #1d2622;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px 88px; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: .12em .38em;
+    font-size: .875em;
+  }
+  a { color: var(--accent); }
+  a:hover { text-decoration: none; }
+
+  header { padding: 72px 0 40px; border-bottom: 1px solid var(--border); }
+  .eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 4px 12px;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -.02em; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0; max-width: 62ch; }
+
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 56px 0 20px;
+  }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+
+  .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: var(--shadow);
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card h3 { color: var(--accent); }
+
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 480px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  td:first-child { white-space: nowrap; }
+
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0 0;
+  }
+  .note p { margin: 0; font-size: 14.5px; color: var(--muted); }
+  .note strong { color: var(--text); }
+
+  .decisions { display: grid; gap: 14px; }
+  .decision {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .decision p { margin: 0; font-size: 14.5px; color: var(--muted); }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    margin: 0;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  footer {
+    margin-top: 72px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">Personal infrastructure</span>
+    <h1>Private WireGuard VPN on Oracle Cloud Always Free</h1>
+    <p class="lede">
+      A four-person family VPN on an Oracle Cloud <code>VM.Standard.A1.Flex</code> ARM
+      instance running Ubuntu 24.04 LTS. Everything here is scripted and idempotent.
+      Nothing prints a private key unless you explicitly ask it to.
+    </p>
+  </header>
+
+  <h2>Start here</h2>
+  <div class="cards">
+    <a class="card" href="https://github.com/AttaullahSher/VPN/blob/main/RESUME.md">
+      <h3>RESUME.md &rarr;</h3>
+      <p>Source of truth for project state, every decision made, and what is pending. Read this first.</p>
+    </a>
+    <a class="card" href="https://github.com/AttaullahSher/VPN/blob/main/RESUME_PROMPT.md">
+      <h3>RESUME_PROMPT.md &rarr;</h3>
+      <p>Paste this to continue the build in a fresh session.</p>
+    </a>
+    <a class="card" href="https://github.com/AttaullahSher/VPN/blob/main/docs/PHASE1_STEP_BY_STEP.md">
+      <h3>Phase 1 walkthrough &rarr;</h3>
+      <p>Field-by-field instance creation in the Oracle console.</p>
+    </a>
+    <a class="card" href="https://github.com/AttaullahSher/VPN/blob/main/docs/TROUBLESHOOTING.md">
+      <h3>Troubleshooting &rarr;</h3>
+      <p>The failure modes this build actually hit, and how each was resolved.</p>
+    </a>
+  </div>
+
+  <h2>Repository layout</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Path</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>cloud-init/bootstrap.yaml</code></td><td>Pasted at instance creation. Only adds SSH on TCP/443.</td></tr>
+        <tr><td><code>oracle/cloudshell-open-ports.sh</code></td><td>Opens UDP 51820 + TCP 443 in the VCN security list, from Cloud Shell.</td></tr>
+        <tr><td><code>oracle/cloudshell-launch-retry.sh</code></td><td>Retry loop for &ldquo;Out of host capacity&rdquo;.</td></tr>
+        <tr><td><code>server/setup.sh</code></td><td>Phase 2. Hardening, WireGuard, firewall, DNS, keep-alive.</td></tr>
+        <tr><td><code>server/peer.sh</code></td><td>Phase 3. <code>add</code> / <code>list</code> / <code>qr</code> / <code>png</code> / <code>conf</code> / <code>revoke</code>.</td></tr>
+        <tr><td><code>server/verify.sh</code></td><td>Phase 4. Handshakes, firewall ordering, DNS, MTU, throughput.</td></tr>
+        <tr><td><code>server/egress.sh</code></td><td>Month-to-date egress against the 10 TB free cap.</td></tr>
+        <tr><td><code>docs/</code></td><td>Phase 1 console walkthrough, instance creation, troubleshooting.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Design decisions</h2>
+  <div class="decisions">
+    <div class="decision">
+      <h3>Tunnel</h3>
+      <p><code>10.66.66.0/24</code> + <code>fd42:66:66::/64</code>, UDP 51820, MTU 1420 &mdash; 1500 minus
+      80 bytes of worst-case WireGuard overhead. TCP MSS is also clamped to the real path MTU on the
+      server, which kills the &ldquo;page half-loads then hangs&rdquo; class of bug on networks with a
+      smaller MTU.</p>
+    </div>
+    <div class="decision">
+      <h3>Oracle&rsquo;s firewall trap</h3>
+      <p>The Ubuntu image ships an iptables ruleset whose INPUT and FORWARD chains both end in
+      <code>REJECT --reject-with icmp-host-prohibited</code>. Opening the VCN security list is
+      <em>not</em> enough; packets reach the instance and get dropped locally. Every rule is therefore
+      inserted at the top of its chain, and <code>verify.sh</code> checks that the ACCEPT is numbered
+      lower than the REJECT.</p>
+    </div>
+    <div class="decision">
+      <h3>IPv6</h3>
+      <p>Oracle VCNs are IPv4-only unless enabled explicitly, so the server usually has no IPv6 uplink.
+      Peers still route <code>::/0</code> into the tunnel anyway &mdash; without it, a phone on an
+      IPv6-capable carrier would send IPv6 traffic around the VPN. Routing it into a tunnel that drops
+      it forces a clean fallback to IPv4.</p>
+    </div>
+    <div class="decision">
+      <h3>DNS</h3>
+      <p><code>unbound</code> on <code>10.66.66.1</code>, reachable only from inside the tunnel,
+      forwarding upstream over DNS-over-TLS to Cloudflare and Quad9.</p>
+    </div>
+    <div class="decision">
+      <h3>Peer add / revoke isolation</h3>
+      <p>Peers are applied with live <code>wg set</code> calls, never by restarting the interface.
+      Adding or revoking one peer does not drop anyone else&rsquo;s session.</p>
+    </div>
+    <div class="decision">
+      <h3>Idle reclamation</h3>
+      <p>Oracle reclaims an Always Free instance only when CPU (95th percentile), network <em>and</em>
+      memory all stay under 20% for 7 days. A memory ballast holding 30% of RAM satisfies the rule at
+      zero CPU cost, and carries the maximum OOM score so the kernel kills it first if real memory is
+      ever needed.</p>
+    </div>
+  </div>
+
+  <h2>SSH access key</h2>
+  <p style="color: var(--muted); font-size: 14.5px; margin: 0 0 14px;">
+    The setup machine uses this public key. It is safe to publish. The matching private key never
+    leaves the setup machine and is never printed.
+  </p>
+  <pre><code>ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINZOq7gwxznX1mnwaZc4WWS4DyYWWWYLiT1dhptJHF0D claude-setup</code></pre>
+
+  <div class="note">
+    <p><strong>Personal use, not a public service.</strong> This site is documentation only &mdash; it
+    exposes no endpoint and no credential. Project status lives in
+    <a href="https://github.com/AttaullahSher/VPN/blob/main/RESUME.md">RESUME.md</a>, which is the
+    single source of truth and is kept current as phases complete.</p>
+  </div>
+
+  <footer>
+    <a href="https://github.com/AttaullahSher/VPN">github.com/AttaullahSher/VPN</a>
+  </footer>
+
+</div>
+</body>
+</html>
