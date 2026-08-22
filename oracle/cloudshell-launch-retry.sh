@@ -2,22 +2,47 @@
 # =============================================================================
 # Create the VPN instance from OCI Cloud Shell, instead of the console form.
 #
-# Discovers the subnet, the newest Ubuntu 24.04 ARM image and every availability
-# domain by itself, then launches VM.Standard.A1.Flex and RETRIES on "Out of
+# Discovers the subnet, the newest Ubuntu 24.04 image for the chosen shape and
+# every availability domain by itself, then launches and RETRIES on "Out of
 # host capacity" until it lands. Prints the public IP when it succeeds.
+#
+# SHAPE picks which free machine to ask for:
+#
+#   VM.Standard.A1.Flex      Ampere ARM, sized by OCPUS/MEMGB. Better hardware,
+#                            but free Ampere capacity is scarce in single-AD
+#                            regions and a launch can queue for days.
+#   VM.Standard.E2.1.Micro   AMD x86, fixed at 1/8 OCPU burstable to a full core
+#                            and 1 GB RAM. Two are Always Free in every tenancy
+#                            and capacity is almost always there. Ample for a
+#                            four-person WireGuard tunnel: WireGuard runs in
+#                            kernel space, so the box is nearly idle while
+#                            forwarding, and the shape still gets 480 Mbit/s -
+#                            more than any home or mobile uplink.
 #
 # Prerequisite: a VCN must exist (Networking -> Virtual Cloud Networks ->
 # Start VCN Wizard -> "VCN with Internet Connectivity").
 #
-#   bash cloudshell-launch-retry.sh
+#   bash cloudshell-launch-retry.sh                    # ARM, 1 OCPU / 6 GB
 #   OCPUS=2 MEMGB=12 bash cloudshell-launch-retry.sh   # bigger, lands less often
+#   SHAPE=VM.Standard.E2.1.Micro bash cloudshell-launch-retry.sh   # AMD, lands now
 # =============================================================================
 set -uo pipefail
 
 C="${OCI_TENANCY:?not running inside OCI Cloud Shell}"
 NAME="${NAME:-wg-vpn}"
+SHAPE="${SHAPE:-VM.Standard.A1.Flex}"
 OCPUS="${OCPUS:-1}"
 MEMGB="${MEMGB:-6}"
+
+# Flex shapes are sized at launch and REQUIRE --shape-config. Fixed shapes such
+# as E2.1.Micro have their size baked into the shape name and REJECT it, so the
+# flag has to be omitted entirely rather than passed with defaults.
+case "$SHAPE" in
+  *.Flex) SHAPE_CONFIG=(--shape-config "{\"ocpus\":${OCPUS},\"memoryInGBs\":${MEMGB}}")
+          SHAPE_DESC="${OCPUS} OCPU / ${MEMGB} GB" ;;
+  *)      SHAPE_CONFIG=()
+          SHAPE_DESC="fixed size, set by the shape" ;;
+esac
 WORK="${WORK:-$HOME/wg}"
 mkdir -p "$WORK"; cd "$WORK"
 
@@ -89,9 +114,9 @@ fi
 
 IMAGE="$(oci compute image list -c "$C" \
   --operating-system 'Canonical Ubuntu' --operating-system-version '24.04' \
-  --shape VM.Standard.A1.Flex --sort-by TIMECREATED --sort-order DESC 2>/dev/null \
+  --shape "$SHAPE" --sort-by TIMECREATED --sort-order DESC 2>/dev/null \
   | python3 -c 'import sys,json;d=json.load(sys.stdin).get("data") or [];print(d[0]["id"] if d else "")')"
-[ -n "$IMAGE" ] || { echo "!! No Ubuntu 24.04 ARM image found in this region."; exit 1; }
+[ -n "$IMAGE" ] || { echo "!! No Ubuntu 24.04 image for $SHAPE in this region."; exit 1; }
 
 mapfile -t ADS < <(oci iam availability-domain list -c "$C" 2>/dev/null \
   | python3 -c 'import sys,json;[print(a["name"]) for a in json.load(sys.stdin)["data"]]')
@@ -109,16 +134,20 @@ PY
 echo "    subnet : $SUBNET"
 echo "    image  : $IMAGE"
 echo "    ADs    : ${ADS[*]}"
-echo "    shape  : VM.Standard.A1.Flex  ${OCPUS} OCPU / ${MEMGB} GB"
-echo
-echo "==> launching. Capacity errors are expected; this retries every ${SLEEP}s."
-echo "    Leave this tab open. Ctrl-C to stop."
+echo "    shape  : ${SHAPE}  ${SHAPE_DESC}"
 echo
 
 ATTEMPT=0
 BASE="${BASE:-90}"        # seconds between ordinary capacity retries
 BACKOFF="$BASE"           # grows when Oracle rate-limits us
 MAXBACKOFF=900
+
+# Defined above the banner on purpose: this runs under `set -u`, so printing a
+# retry interval that has not been assigned yet aborts the script here, before
+# a single launch is ever attempted.
+echo "==> launching. Capacity errors are expected; this retries every ${BASE}s."
+echo "    Leave this tab open. Ctrl-C to stop."
+echo
 
 while :; do
   for AD in "${ADS[@]}"; do
@@ -127,8 +156,8 @@ while :; do
     OUT="$(oci compute instance launch \
         --compartment-id "$C" \
         --availability-domain "$AD" \
-        --shape VM.Standard.A1.Flex \
-        --shape-config "{\"ocpus\":${OCPUS},\"memoryInGBs\":${MEMGB}}" \
+        --shape "$SHAPE" \
+        "${SHAPE_CONFIG[@]}" \
         --image-id "$IMAGE" \
         --subnet-id "$SUBNET" \
         --assign-public-ip true \
