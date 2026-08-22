@@ -1,6 +1,6 @@
 # Project state — resume from here
 
-Last updated: 2026-08-17. Written so a fresh session can pick this up cold.
+Last updated: 2026-08-22. Written so a fresh session can pick this up cold.
 
 ## Goal
 
@@ -17,7 +17,7 @@ Peer names to create: `atta-iphone`, `atta-laptop`, `peer3`, `peer4`.
 | Oracle account | ✅ created |
 | Home region | ✅ `me-abudhabi-1` (UAE Central, Abu Dhabi) — **cannot be changed** |
 | VCN + public subnet | ✅ created via the VCN wizard |
-| Compute instance | ⏳ **launch loop running in Cloud Shell** under tmux session `wg`, script `~/wg/launch.sh`, logging to `~/wg/launch.log`. Repeatedly hitting "Out of host capacity", which is normal for free Ampere. This is the only outstanding blocker. |
+| Compute instance | ⏳ **none exists.** Console → Compute → Instances showed "No items to display" on 2026-08-22, five days after the Ampere launch loop was started. The loop never landed and is no longer running. **Now switching to the AMD shape** — see the shape decision below. This is the only outstanding blocker. |
 | Security list ingress | ✅ TCP 22 + TCP 443 + UDP 51820 + ICMP, all from `0.0.0.0/0`, on the **public** subnet's security list — verified 2026-08-17 |
 | Launch loop target | ✅ verified against the live process: public subnet, `--assign-public-ip true`, 1 OCPU / 6 GB, AD-1, metadata carrying the owner's key |
 | Phase 2 (server setup) | ⬜ not started — needs the public IP |
@@ -56,7 +56,25 @@ instance never goes there.
 
 **Region** — Abu Dhabi. ~2–5 ms latency. Chosen; not revisitable.
 
-**Shape** — `VM.Standard.A1.Flex`, **1 OCPU / 6 GB**. Started at 2 OCPU / 12 GB
+**Shape — switched to AMD `VM.Standard.E2.1.Micro` on 2026-08-22.** Five days of
+retrying never landed an Ampere machine, and the owner declined both waiting
+longer and upgrading to Pay As You Go. Every tenancy gets **two** E2.1.Micro
+instances Always Free — 1/8 OCPU baseline, bursting to a full core, 1 GB RAM —
+and unlike Ampere they are essentially always available. The 2026 free-tier cuts
+that reduced the A1 allowance left the AMD micros untouched.
+
+It is enough. WireGuard runs in kernel space, so the CPU is near-idle while
+forwarding, 1 GB is far more RAM than the daemon needs, and the shape still gets
+480 Mbit/s — well past any home or mobile uplink for four people. `setup.sh`
+needed no changes: it never assumed an architecture, and it sizes the memory
+ballast from `/proc/meminfo`, so on 1 GB it holds ~300 MB and still clears
+Oracle's 20% idle threshold.
+
+To go back to Ampere later, run the launcher with no `SHAPE` set — A1 is still
+the default, and the notes below still apply.
+
+**Previous Ampere sizing (kept for reference)** — `VM.Standard.A1.Flex`,
+**1 OCPU / 6 GB**. Started at 2 OCPU / 12 GB
 but Ampere capacity in Abu Dhabi kept refusing, so the owner opted down. This is
 not a compromise worth undoing: free A1 gives 1 Gbit/s of network per OCPU and
 WireGuard is kernel-space, so 1 OCPU is already a full-gigabit tunnel for four
@@ -124,9 +142,10 @@ Connect with:
 
 ## Next steps, in order
 
-1. **Get the instance running.** In Cloud Shell: `tail -5 ~/wg/launch.log`.
-   Restart the loop with `oracle/cloudshell-launch-retry.sh` if it died. Drop to
-   `OCPUS=1 MEMGB=6` if capacity keeps refusing.
+1. **Get the instance running.** In Cloud Shell, launch the AMD micro:
+   `SHAPE=VM.Standard.E2.1.Micro bash cloudshell-launch-retry.sh`. It should
+   land within a minute or two rather than queueing. Omit `SHAPE` to ask for
+   Ampere instead, which may never land in this region.
 2. **Open the ports** — `oracle/cloudshell-open-ports.sh` (UDP 51820, TCP 443).
 3. **Phase 2** — copy `server/setup.sh` to the instance and run it as root.
    Explain each of its nine stages before running. Verify it reports the public
@@ -139,6 +158,15 @@ Connect with:
    prints (dnsleaktest.com extended, ipv6-test.com, speed.cloudflare.com).
 
 ## Gotchas already hit
+
+- `cloudshell-launch-retry.sh` printed `${SLEEP}` in its startup banner, but no
+  `SLEEP` variable was ever assigned — only `BASE`. The script runs under
+  `set -u`, so that line aborted it with `SLEEP: unbound variable` **before the
+  first launch attempt**, exit 127. Fixed on 2026-08-22 by defining the retry
+  timings above the banner and printing `${BASE}`. Worth knowing because the
+  failure looked like nothing happening at all, not like an error.
+- Fixed shapes reject `--shape-config`; flex shapes require it. The launcher now
+  keys off the `.Flex` suffix and passes the flag only when it applies.
 
 - The launch loop must treat **HTTP 429 `TooManyRequests`** as retryable with
   exponential backoff. Oracle throttles `launch_instance` per user; a fixed 60 s
