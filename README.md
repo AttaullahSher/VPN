@@ -17,6 +17,7 @@ what is done, what is pending, and every decision made so far.
 | `cloud-init/bootstrap.yaml` | Pasted at instance creation. Only adds SSH on TCP/443. |
 | `oracle/cloudshell-open-ports.sh` | Opens UDP 51820 + TCP 443 in the VCN security list, from Cloud Shell. |
 | `oracle/cloudshell-launch-retry.sh` | Retry loop for "Out of host capacity". |
+| `server/phase0-auto.sh` | Phone-only bring-up: cloud-init runs the whole build, then serves peer QR codes to your phone. See `docs/PHASE0_MOBILE.md`. |
 | `server/setup.sh` | Phase 2. Hardening, WireGuard, firewall, DNS, keep-alive. |
 | `server/peer.sh` | Phase 3. `add` / `list` / `qr` / `png` / `conf` / `revoke`. |
 | `server/verify.sh` | Phase 4. Handshakes, firewall ordering, DNS, MTU, throughput. |

@@ -73,6 +73,16 @@ Oracle's 20% idle threshold.
 To go back to Ampere later, run the launcher with no `SHAPE` set — A1 is still
 the default, and the notes below still apply.
 
+**Terminal-free delivery (2026-08-22)** — the owner is on mobile and does not want
+to use Cloud Shell or SSH. `server/phase0-auto.sh` runs the whole build from
+cloud-init and then serves each peer's QR code / `.conf` on `https://<ip>/` for a
+bounded window (default 60 min), behind HTTP Basic Auth with a passphrase the
+owner sets in the boot line, over a self-signed TLS cert, and shuts itself off
+(never re-enabled on reboot). It serves private keys, deliberately and only
+briefly — acceptable because the AMD instance is disposable and the window is
+short; no key is ever printed to chat or committed. Console walkthrough in
+`docs/PHASE0_MOBILE.md`.
+
 **Previous Ampere sizing (kept for reference)** — `VM.Standard.A1.Flex`,
 **1 OCPU / 6 GB**. Started at 2 OCPU / 12 GB
 but Ampere capacity in Abu Dhabi kept refusing, so the owner opted down. This is
@@ -142,10 +152,17 @@ Connect with:
 
 ## Next steps, in order
 
-1. **Get the instance running.** In Cloud Shell, launch the AMD micro:
-   `SHAPE=VM.Standard.E2.1.Micro bash cloudshell-launch-retry.sh`. It should
-   land within a minute or two rather than queueing. Omit `SHAPE` to ask for
-   Ampere instead, which may never land in this region.
+1. **Get the instance running — phone-only path (owner's chosen route).** No
+   terminal at all: create the instance in the console UI on the AMD shape
+   `VM.Standard.E2.1.Micro`, and paste the four-line boot script from
+   `docs/PHASE0_MOBILE.md` into the instance's cloud-init / user-data box. On
+   first boot the instance fetches `server/phase0-auto.sh`, runs setup.sh +
+   peer.sh itself, and serves the peer QR codes on `https://<public-ip>/` behind
+   a passphrase for ~60 min. The owner scans from their phone. Phases 2-4 below
+   all happen automatically inside phase0-auto.sh on this path.
+   - Terminal alternative (needs SSH or Cloud Shell): launch with
+     `SHAPE=VM.Standard.E2.1.Micro bash cloudshell-launch-retry.sh`, then run the
+     phases by hand. Omit `SHAPE` to ask for Ampere, which may never land here.
 2. **Open the ports** — `oracle/cloudshell-open-ports.sh` (UDP 51820, TCP 443).
 3. **Phase 2** — copy `server/setup.sh` to the instance and run it as root.
    Explain each of its nine stages before running. Verify it reports the public
