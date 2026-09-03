@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asher VPN</title>
+<meta name="description" content="Asher VPN — your private WireGuard tunnel status.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1627">
+<!-- iOS home-screen app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Asher VPN">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+  :root{
+    --bg:#070c18; --bg2:#0e1627; --card:#111c30; --line:#1e2b45;
+    --text:#eaf1fb; --muted:#93a3bd; --emerald:#10b981; --cyan:#22d3ee;
+    --amber:#f59e0b; --red:#ef4444;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% -10%, #10203a 0%, var(--bg) 60%);
+    color:var(--text);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh;
+    padding:max(20px,env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:440px;margin:0 auto}
+  header{display:flex;align-items:center;gap:12px;padding:8px 2px 22px}
+  header img{width:34px;height:34px;border-radius:9px}
+  header b{font-size:19px;letter-spacing:.2px}
+  header span{margin-left:auto;font-size:12px;color:var(--muted)}
+
+  .status{
+    position:relative;background:linear-gradient(180deg,var(--card),#0d1526);
+    border:1px solid var(--line);border-radius:22px;padding:30px 22px 26px;
+    text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.45);
+  }
+  .ring{
+    width:150px;height:150px;margin:6px auto 18px;border-radius:50%;
+    display:grid;place-items:center;position:relative;
+    background:
+      radial-gradient(closest-side,var(--card) 78%,transparent 79% 100%),
+      conic-gradient(var(--ring,#33415a) var(--pct,0%), #1b2740 0);
+    transition:--pct .6s ease;
+  }
+  .ring::after{content:"";position:absolute;inset:12px;border-radius:50%;
+    background:radial-gradient(120% 120% at 50% 0%, #16233c, #0e1627);}
+  .ring .glyph{position:relative;z-index:1;font-size:46px;line-height:1}
+  .state{font-size:24px;font-weight:700;margin:2px 0 4px}
+  .sub{color:var(--muted);font-size:14px;min-height:20px}
+
+  .rows{margin:20px 0 4px;border-top:1px solid var(--line)}
+  .row{display:flex;justify-content:space-between;gap:12px;
+    padding:13px 2px;border-bottom:1px solid var(--line);font-size:14.5px}
+  .row .k{color:var(--muted)}
+  .row .v{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;word-break:break-all}
+
+  .btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;
+    font-size:16px;font-weight:700;margin-top:12px;cursor:pointer;text-decoration:none;text-align:center}
+  .btn.primary{background:linear-gradient(90deg,var(--emerald),var(--cyan));color:#04121a}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+
+  details{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:600;display:flex;align-items:center;gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary .chev{margin-left:auto;color:var(--muted);transition:transform .2s}
+  details[open] summary .chev{transform:rotate(90deg)}
+  .steps{padding:2px 18px 18px;color:var(--muted);font-size:14.5px}
+  .steps ol{margin:0;padding-left:20px}
+  .steps li{margin:9px 0}
+  .steps a{color:var(--cyan)}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:22px}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icon-192.png" alt="">
+    <b>Asher VPN</b>
+    <span id="loc"></span>
+  </header>
+
+  <section class="status" id="card" style="--ring:#33415a;--pct:0%">
+    <div class="ring" id="ring"><div class="glyph" id="glyph">…</div></div>
+    <div class="state" id="state">Checking…</div>
+    <div class="sub" id="sub">Seeing where your traffic exits</div>
+
+    <div class="rows">
+      <div class="row"><span class="k">Your exit IP</span><span class="v" id="myip">—</span></div>
+      <div class="row"><span class="k">Asher VPN server</span><span class="v" id="srv">—</span></div>
+    </div>
+
+    <button class="btn primary" id="refresh">Refresh status</button>
+    <a class="btn ghost" id="wg" href="https://apps.apple.com/app/wireguard/id1441195209">Open / get WireGuard</a>
+  </section>
+
+  <details>
+    <summary>Set up on this device <span class="chev">›</span></summary>
+    <div class="steps">
+      <ol>
+        <li>Install <b>WireGuard</b> (button above).</li>
+        <li>Open the <b>Asher VPN profile</b> I sent you in chat → tap it → choose <b>WireGuard</b>. (Or in WireGuard: <b>+</b> → <b>Import from file</b>.)</li>
+        <li>Toggle <b>Asher VPN</b> on. Come back here and tap <b>Refresh</b> — it should turn green.</li>
+      </ol>
+      <p class="muted" style="margin:6px 0 0">On iPhone, the on/off switch lives in the WireGuard app — this app shows whether you're actually protected.</p>
+    </div>
+  </details>
+
+  <footer>Asher VPN · private WireGuard tunnel</footer>
+</div>
+
+<script>
+(function(){
+  var SERVER_KEY="asher_vpn_server";
+  // read server IP from #server=… or ?server=…, persist it on this device
+  function paramServer(){
+    var h=(location.hash||"").replace(/^#/,""), q=location.search.replace(/^\?/,"");
+    var m=(h+"&"+q).match(/server=([0-9.]+)/);
+    return m?m[1]:null;
+  }
+  var fromUrl=paramServer();
+  if(fromUrl){try{localStorage.setItem(SERVER_KEY,fromUrl)}catch(e){}}
+  var server=fromUrl||(function(){try{return localStorage.getItem(SERVER_KEY)}catch(e){return null}})();
+
+  var $=function(id){return document.getElementById(id)};
+  $("srv").textContent=server||"not set";
+
+  function paint(kind,glyph,state,sub,ring,pct){
+    var c=$("card");
+    c.style.setProperty("--ring",ring); c.style.setProperty("--pct",pct);
+    $("glyph").textContent=glyph; $("state").textContent=state; $("sub").textContent=sub;
+  }
+
+  function myIP(){
+    // try a couple of CORS-friendly endpoints
+    var urls=["https://api.ipify.org?format=json","https://api64.ipify.org?format=json"];
+    return urls.reduce(function(p,u){
+      return p.catch(function(){
+        return fetch(u,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){return j.ip});
+      });
+    }, Promise.reject());
+  }
+
+  var busy=false;
+  function check(){
+    if(busy) return; busy=true;
+    if(!server){ paint("na","•","Not set up yet","Open the link I sent to finish setup","#33415a","0%"); busy=false; return; }
+    paint("checking","…","Checking…","Seeing where your traffic exits","#33415a","25%");
+    myIP().then(function(ip){
+      $("myip").textContent=ip||"—";
+      if(ip===server){
+        paint("on","🛡️","Protected","Your traffic is going through Asher VPN","#10b981","100%");
+      }else{
+        paint("off","⚠︎","Not protected","You're on your normal connection — turn Asher VPN on in WireGuard","#f59e0b","100%");
+      }
+    }).catch(function(){
+      $("myip").textContent="—";
+      paint("err","?","Can't check","No internet, or the check service is unreachable","#ef4444","100%");
+    }).then(function(){ busy=false; });
+  }
+
+  $("refresh").addEventListener("click",check);
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
+  check();
+
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
