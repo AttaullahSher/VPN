@@ -1,5 +1,5 @@
 /* Asher VPN — minimal offline shell cache */
-var CACHE = "asher-vpn-v1";
+var CACHE = "asher-vpn-v2";
 var ASSETS = ["./", "index.html", "manifest.webmanifest",
               "icon-192.png", "icon-512.png", "icon-180.png"];
 
