@@ -4,10 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Asher VPN</title>
-<meta name="description" content="Asher VPN — your private WireGuard tunnel status.">
+<meta name="description" content="Asher VPN — your private WireGuard tunnel: status, live speed, per-device traffic, and profiles.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0e1627">
-<!-- home-screen app -->
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,167 +15,340 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
   :root{
-    --bg:#070c18; --bg2:#0e1627; --card:#111c30; --line:#1e2b45;
-    --text:#eaf1fb; --muted:#93a3bd; --emerald:#10b981; --cyan:#22d3ee;
-    --amber:#f59e0b; --red:#ef4444;
+    --bg:#070c18; --bg2:#0e1627; --card:#111c30; --card2:#0d1526; --line:#1e2b45;
+    --ink:#eaf1fb; --muted:#93a3bd; --faint:#5c6b8a;
+    --emerald:#10b981; --cyan:#22d3ee; --amber:#f59e0b; --red:#ef4444;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0}
   body{
-    background:
-      radial-gradient(120% 90% at 50% -10%, #10203a 0%, var(--bg) 60%);
-    color:var(--text);
+    background:radial-gradient(120% 80% at 50% -10%, #10203a 0%, var(--bg) 55%);
+    color:var(--ink); min-height:100vh;
     font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    min-height:100vh;
-    padding:max(20px,env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
     -webkit-font-smoothing:antialiased;
+    padding:max(14px,env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
   }
-  .wrap{max-width:440px;margin:0 auto}
-  header{display:flex;align-items:center;gap:12px;padding:8px 2px 22px}
-  header img{width:34px;height:34px;border-radius:9px}
-  header b{font-size:19px;letter-spacing:.2px}
-  header span{margin-left:auto;font-size:12px;color:var(--muted)}
+  .wrap{max-width:460px;margin:0 auto}
+  header{display:flex;align-items:center;gap:12px;padding:6px 2px 18px}
+  header img{width:32px;height:32px;border-radius:8px}
+  header b{font-size:18px;letter-spacing:.2px}
+  .menubtn{margin-left:auto;background:var(--card);border:1px solid var(--line);color:var(--ink);
+    width:42px;height:42px;border-radius:11px;font-size:18px;cursor:pointer;display:grid;place-items:center}
 
-  .status{
-    position:relative;background:linear-gradient(180deg,var(--card),#0d1526);
-    border:1px solid var(--line);border-radius:22px;padding:30px 22px 26px;
-    text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.45);
-  }
-  .ring{
-    width:150px;height:150px;margin:6px auto 18px;border-radius:50%;
-    display:grid;place-items:center;position:relative;
-    background:
-      radial-gradient(closest-side,var(--card) 78%,transparent 79% 100%),
-      conic-gradient(var(--ring,#33415a) var(--pct,0%), #1b2740 0);
-    transition:--pct .6s ease;
-  }
-  .ring::after{content:"";position:absolute;inset:12px;border-radius:50%;
-    background:radial-gradient(120% 120% at 50% 0%, #16233c, #0e1627);}
-  .ring .glyph{position:relative;z-index:1;font-size:46px;line-height:1}
-  .state{font-size:24px;font-weight:700;margin:2px 0 4px}
+  .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+    border-radius:20px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+  .center{text-align:center}
+
+  /* status ring */
+  .ring{width:150px;height:150px;margin:4px auto 16px;border-radius:50%;display:grid;place-items:center;position:relative;
+    background:radial-gradient(closest-side,var(--card) 78%,transparent 79%),conic-gradient(var(--rc,#33415a) var(--rp,0%), #1b2740 0)}
+  .ring::after{content:"";position:absolute;inset:12px;border-radius:50%;background:radial-gradient(120% 120% at 50% 0%,#16233c,#0e1627)}
+  .ring .g{position:relative;z-index:1;font-size:44px}
+  .state{font-size:23px;font-weight:700;margin:2px 0 3px}
   .sub{color:var(--muted);font-size:14px;min-height:20px}
 
-  .rows{margin:20px 0 4px;border-top:1px solid var(--line)}
-  .row{display:flex;justify-content:space-between;gap:12px;
-    padding:13px 2px;border-bottom:1px solid var(--line);font-size:14.5px}
-  .row .k{color:var(--muted)}
-  .row .v{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;word-break:break-all}
+  .rows{margin-top:18px;border-top:1px solid var(--line)}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line);font-size:14.5px}
+  .row .k{color:var(--muted)} .row .v{font-weight:600;font-variant-numeric:tabular-nums;word-break:break-all;text-align:right}
 
-  .btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;
-    font-size:16px;font-weight:700;margin-top:12px;cursor:pointer;text-decoration:none;text-align:center}
-  .btn.primary{background:linear-gradient(90deg,var(--emerald),var(--cyan));color:#04121a}
-  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+  .btn{display:block;width:100%;border:0;border-radius:13px;padding:14px;font-size:15.5px;font-weight:700;margin-top:12px;cursor:pointer;text-decoration:none;text-align:center}
+  .btn.p{background:linear-gradient(90deg,var(--emerald),var(--cyan));color:#04121a}
+  .btn.g{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn.sm{padding:11px;font-size:14px;margin-top:8px}
 
-  details{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-  summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:600;display:flex;align-items:center;gap:10px}
-  summary::-webkit-details-marker{display:none}
-  summary .chev{margin-left:auto;color:var(--muted);transition:transform .2s}
-  details[open] summary .chev{transform:rotate(90deg)}
-  .steps{padding:2px 18px 18px;color:var(--muted);font-size:14.5px}
-  .steps ol{margin:0;padding-left:20px}
-  .steps li{margin:9px 0}
-  .steps a{color:var(--cyan)}
-  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:22px}
-  .muted{color:var(--muted)}
+  h2.sec{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:24px 2px 10px}
+
+  /* speed chart */
+  .spd{display:flex;align-items:baseline;gap:16px;margin:2px 0 6px}
+  .spd .big{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+  .spd .u{color:var(--muted);font-size:13px}
+  .dnup{display:flex;gap:18px;color:var(--muted);font-size:13px;margin-bottom:10px}
+  .dnup b{color:var(--ink)}
+  svg.chart{width:100%;height:120px;display:block;overflow:visible}
+
+  /* traffic bars */
+  .pf{margin:12px 0}
+  .pf .t{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px}
+  .pf .t .val{color:var(--muted);font-variant-numeric:tabular-nums}
+  .bar{height:10px;border-radius:6px;background:#16233c;overflow:hidden}
+  .bar>i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--emerald),var(--cyan))}
+
+  /* menu overlay */
+  .overlay{position:fixed;inset:0;background:rgba(4,8,18,.72);backdrop-filter:blur(6px);z-index:20;display:none}
+  .overlay.on{display:block}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg2);border-top-left-radius:22px;border-top-right-radius:22px;
+    border-top:1px solid var(--line);padding:10px 14px calc(20px + env(safe-area-inset-bottom))}
+  .grab{width:40px;height:4px;border-radius:2px;background:#33415a;margin:8px auto 12px}
+  .mi{display:flex;align-items:center;gap:14px;width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);
+    color:var(--ink);padding:16px 6px;font-size:16px;font-weight:600;cursor:pointer;text-align:left}
+  .mi:last-child{border-bottom:0} .mi .ic{font-size:20px;width:26px;text-align:center} .mi small{display:block;color:var(--muted);font-weight:400;font-size:12.5px}
+
+  details{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden}
+  summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:600;display:flex;align-items:center;gap:10px}
+  summary::-webkit-details-marker{display:none} summary .cv{margin-left:auto;color:var(--muted);transition:transform .2s}
+  details[open] summary .cv{transform:rotate(90deg)}
+  .steps{padding:0 16px 16px;color:var(--muted);font-size:14.5px}
+  .steps ol{margin:0;padding-left:20px} .steps li{margin:8px 0} .steps b{color:var(--ink)} .steps a{color:var(--cyan)}
+
+  .qrbox{background:#fff;border-radius:12px;padding:10px;width:190px;height:190px;margin:10px auto;display:grid;place-items:center}
+  .qrbox img,.qrbox canvas{width:170px!important;height:170px!important}
+  input.pass{width:100%;background:#0b1424;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:13px;font-size:15px}
+  .note{color:var(--faint);font-size:12.5px;margin-top:10px;line-height:1.5}
+  .hide{display:none!important}
+  .back{background:transparent;border:0;color:var(--cyan);font-size:14px;padding:6px 2px;cursor:pointer;margin-bottom:4px}
+  .pill{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:100px;padding:2px 9px;margin-left:6px}
 </style>
 </head>
-<body>
+<body data-palette="#10b981,#22d3ee">
 <div class="wrap">
   <header>
     <img src="icon-192.png" alt="">
     <b>Asher VPN</b>
-    <span id="loc"></span>
+    <button class="menubtn" id="menuBtn" aria-label="Menu">&#9776;</button>
   </header>
 
-  <section class="status" id="card" style="--ring:#33415a;--pct:0%">
-    <div class="ring" id="ring"><div class="glyph" id="glyph">…</div></div>
-    <div class="state" id="state">Checking…</div>
-    <div class="sub" id="sub">Seeing where your traffic exits</div>
-
-    <div class="rows">
-      <div class="row"><span class="k">Your exit IP</span><span class="v" id="myip">—</span></div>
-      <div class="row"><span class="k">Asher VPN server</span><span class="v" id="srv">—</span></div>
+  <!-- HOME -->
+  <section id="home">
+    <div class="card center">
+      <div class="ring" id="ring"><div class="g" id="glyph">…</div></div>
+      <div class="state" id="state">Checking…</div>
+      <div class="sub" id="sub">Seeing where your traffic exits</div>
+      <div class="rows">
+        <div class="row"><span class="k">Your exit IP</span><span class="v" id="myip">—</span></div>
+        <div class="row"><span class="k">Asher VPN server</span><span class="v" id="srv">—</span></div>
+      </div>
+      <button class="btn p" id="refresh">Refresh status</button>
+      <a class="btn g" href="https://apps.apple.com/app/wireguard/id1441195209">Open / get WireGuard</a>
+      <div class="note">On iPhone the on/off switch lives in the WireGuard app — this app shows whether you're actually protected.</div>
     </div>
 
-    <button class="btn primary" id="refresh">Refresh status</button>
-    <a class="btn ghost" id="wg" href="https://apps.apple.com/app/wireguard/id1441195209">Open / get WireGuard</a>
+    <h2 class="sec">Live speed <span class="pill" id="spdpill">updates ~1 min</span></h2>
+    <div class="card">
+      <div class="spd"><span class="big" id="spdNow">0.0</span><span class="u">Mbps total</span></div>
+      <div class="dnup">↓ down <b id="spdDn">0</b> &nbsp;·&nbsp; ↑ up <b id="spdUp">0</b></div>
+      <svg class="chart" id="spdChart" viewBox="0 0 320 120" preserveAspectRatio="none" aria-label="Live speed over time"></svg>
+    </div>
   </section>
 
-  <details>
-    <summary>Set up on this device <span class="chev">›</span></summary>
-    <div class="steps">
-      <ol>
-        <li>Install <b>WireGuard</b> (button above).</li>
-        <li>Open the <b>Asher VPN profile</b> I sent you in chat → tap it → choose <b>WireGuard</b>. (Or in WireGuard: <b>+</b> → <b>Import from file</b>.)</li>
-        <li>Toggle <b>Asher VPN</b> on. Come back here and tap <b>Refresh</b> — it should turn green.</li>
-      </ol>
-      <p class="muted" style="margin:6px 0 0">On iPhone, the on/off switch lives in the WireGuard app — this app shows whether you're actually protected.</p>
-    </div>
-  </details>
+  <!-- TRAFFIC -->
+  <section id="traffic" class="hide">
+    <button class="back" data-home>‹ Back</button>
+    <h2 class="sec">Data used per profile <span class="pill">since server start</span></h2>
+    <div class="card" id="pfCard"><div class="sub">Loading…</div></div>
+    <button class="btn g sm" id="csvBtn">Download CSV</button>
+    <div class="note">Byte counts only — how much each profile moved, never what was sent. Live history covers the recent window; longer date ranges are a later add.</div>
+  </section>
 
-  <footer>Asher VPN · private WireGuard tunnel</footer>
+  <!-- PROFILES -->
+  <section id="profiles" class="hide">
+    <button class="back" data-home>‹ Back</button>
+    <h2 class="sec">Profiles &amp; QR codes</h2>
+    <div class="card" id="lockCard">
+      <div class="sub" style="margin-bottom:12px">Enter your passphrase to unlock the profiles.</div>
+      <input class="pass" id="passIn" type="password" placeholder="passphrase" autocomplete="off">
+      <button class="btn p sm" id="unlockBtn">Unlock</button>
+      <label class="note" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="remember"> Remember on this device</label>
+      <div class="note" id="lockErr"></div>
+    </div>
+    <div id="pfList"></div>
+  </section>
+
+  <!-- SETUP -->
+  <section id="setup" class="hide">
+    <button class="back" data-home>‹ Back</button>
+    <h2 class="sec">Set up a device (easy steps)</h2>
+    <details><summary>iPhone / iPad <span class="cv">›</span></summary><div class="steps"><ol>
+      <li>Install <b>WireGuard</b> from the App Store.</li>
+      <li>Open <b>Profiles &amp; QR codes</b> in this menu, unlock, and tap your profile.</li>
+      <li><b>Download</b> the file → tap it → <b>Open in WireGuard</b>. (Or in WireGuard tap <b>+</b> → <b>Create from QR code</b> and scan the QR.)</li>
+      <li>Flip the switch <b>on</b>. Come back here and tap Refresh — it turns green.</li>
+    </ol></div></details>
+    <details><summary>Android <span class="cv">›</span></summary><div class="steps"><ol>
+      <li>Install <b>WireGuard</b> from the Play Store.</li>
+      <li>In WireGuard tap <b>+</b> → <b>Scan from QR code</b> and scan your profile's QR here.</li>
+      <li>Give it a name, then toggle it <b>on</b>.</li>
+    </ol></div></details>
+    <details><summary>Windows / Mac laptop <span class="cv">›</span></summary><div class="steps"><ol>
+      <li>Install <b>WireGuard</b> from wireguard.com/install.</li>
+      <li>Unlock <b>Profiles &amp; QR codes</b> here and <b>Download</b> your profile's <b>.conf</b> file.</li>
+      <li>WireGuard → <b>Import tunnel(s) from file</b> → pick the .conf → <b>Activate</b>.</li>
+    </ol></div></details>
+    <div class="note">Each profile works on one device at a time. Give each person their own (APN 1–4).</div>
+  </section>
 </div>
 
+<!-- menu sheet -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <button class="mi" data-go="home"><span class="ic">🛡️</span><span>Status &amp; speed<small>Are you protected + live speed</small></span></button>
+    <button class="mi" data-go="traffic"><span class="ic">📊</span><span>Live traffic<small>Data used per profile</small></span></button>
+    <button class="mi" data-go="profiles"><span class="ic">🔑</span><span>Profiles &amp; QR codes<small>Unlock, scan or download APN 1–4</small></span></button>
+    <button class="mi" data-go="setup"><span class="ic">📱</span><span>Setup guide<small>iPhone · Android · laptop</small></span></button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 (function(){
-  var SERVER_KEY="asher_vpn_server";
-  // read server IP from #server=… or ?server=…, persist it on this device
-  function paramServer(){
-    var h=(location.hash||"").replace(/^#/,""), q=location.search.replace(/^\?/,"");
-    var m=(h+"&"+q).match(/server=([0-9.]+)/);
-    return m?m[1]:null;
-  }
-  // Fallback so the home-screen app works even in iOS's separate PWA storage
-  // sandbox (where a #server= hash / Safari localStorage isn't visible).
-  var DEFAULT_SERVER="51.170.95.199";
-  var fromUrl=paramServer();
-  if(fromUrl){try{localStorage.setItem(SERVER_KEY,fromUrl)}catch(e){}}
-  var server=fromUrl||(function(){try{return localStorage.getItem(SERVER_KEY)}catch(e){return null}})()||DEFAULT_SERVER;
-
+  var SERVER="51.170.94.125";
+  var STATS="wgstats-e420210cab2a30a6";
+  var PEERS={
+    "Jd7b/I/uLKisqWCWsvGOdzFDaxqiXd5H9rxFgv0qADM=":"APN 1",
+    "Jn3/fCK3M0BpntWuYat1AoqzmSAVo6gm8NCXTa1wa28=":"APN 2",
+    "28SU0dTVpZNpKdZDkb+9dnwN1mxGHNYXt3WbJ6v9MlY=":"APN 3",
+    "LqZ1PXCOGbeiiEySRTTiZt3jj0xybHWfjDQYbhk3WSg=":"APN 4"
+  };
+  var ORDER=["APN 1","APN 2","APN 3","APN 4"];
   var $=function(id){return document.getElementById(id)};
-  $("srv").textContent=server||"not set";
 
-  function paint(kind,glyph,state,sub,ring,pct){
-    var c=$("card");
-    c.style.setProperty("--ring",ring); c.style.setProperty("--pct",pct);
-    $("glyph").textContent=glyph; $("state").textContent=state; $("sub").textContent=sub;
+  /* ---------- view switching ---------- */
+  var views=["home","traffic","profiles","setup"];
+  function go(v){
+    views.forEach(function(x){ $(x).classList.toggle("hide", x!==v); });
+    $("overlay").classList.remove("on");
+    window.scrollTo(0,0);
+    if(v==="home"||v==="traffic") pumpStats();
   }
+  $("menuBtn").onclick=function(){ $("overlay").classList.add("on"); };
+  $("overlay").onclick=function(e){ if(e.target===$("overlay")) $("overlay").classList.remove("on"); };
+  document.querySelectorAll("[data-go]").forEach(function(b){ b.onclick=function(){ go(b.getAttribute("data-go")); }; });
+  document.querySelectorAll("[data-home]").forEach(function(b){ b.onclick=function(){ go("home"); }; });
 
+  /* ---------- helpers ---------- */
+  function fmtBytes(n){ n=+n||0; var u=["B","KB","MB","GB","TB"],i=0; while(n>=1024&&i<4){n/=1024;i++;} return n.toFixed(n<10&&i>0?1:0)+" "+u[i]; }
+  function paint(glyph,state,sub,rc,rp){ var r=$("ring"); r.style.setProperty("--rc",rc); r.style.setProperty("--rp",rp); $("glyph").textContent=glyph; $("state").textContent=state; $("sub").textContent=sub; }
+
+  /* ---------- status (IP check) ---------- */
+  $("srv").textContent=SERVER;
   function myIP(){
-    // try a couple of CORS-friendly endpoints
-    var urls=["https://api.ipify.org?format=json","https://api64.ipify.org?format=json"];
-    return urls.reduce(function(p,u){
-      return p.catch(function(){
-        return fetch(u,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){return j.ip});
-      });
-    }, Promise.reject());
+    var us=["https://api.ipify.org?format=json","https://api64.ipify.org?format=json"];
+    return us.reduce(function(p,u){return p.catch(function(){return fetch(u,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){return j.ip})})},Promise.reject());
   }
-
   var busy=false;
   function check(){
-    if(busy) return; busy=true;
-    if(!server){ paint("na","•","Not set up yet","Open the link I sent to finish setup","#33415a","0%"); busy=false; return; }
-    paint("checking","…","Checking…","Seeing where your traffic exits","#33415a","25%");
+    if(busy)return; busy=true;
+    paint("…","Checking…","Seeing where your traffic exits","#33415a","25%");
     myIP().then(function(ip){
       $("myip").textContent=ip||"—";
-      if(ip===server){
-        paint("on","🛡️","Protected","Your traffic is going through Asher VPN","#10b981","100%");
-      }else{
-        paint("off","⚠︎","Not protected","You're on your normal connection — turn Asher VPN on in WireGuard","#f59e0b","100%");
-      }
-    }).catch(function(){
-      $("myip").textContent="—";
-      paint("err","?","Can't check","No internet, or the check service is unreachable","#ef4444","100%");
-    }).then(function(){ busy=false; });
+      if(ip===SERVER) paint("🛡️","Protected","Your traffic is going through Asher VPN","#10b981","100%");
+      else paint("⚠︎","Not protected","You're on your normal connection — turn Asher VPN on in WireGuard","#f59e0b","100%");
+    }).catch(function(){ $("myip").textContent="—"; paint("?","Can't check","No internet, or the check service is unreachable","#ef4444","100%"); })
+    .then(function(){ busy=false; });
+  }
+  $("refresh").onclick=check;
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden){ check(); pumpStats(); } });
+
+  /* ---------- stats feed ---------- */
+  var samples=[]; // {t, total{[name]:{rx,tx}}}
+  function parseFeed(){
+    return fetch("https://ntfy.sh/"+STATS+"/json?poll=1",{cache:"no-store"}).then(function(r){return r.text()}).then(function(txt){
+      var out=[];
+      txt.split("\n").forEach(function(l){ l=l.trim(); if(!l)return; try{ var j=JSON.parse(l); if(j.event==="message"){ var m=JSON.parse(j.message); out.push(m); } }catch(e){} });
+      return out.sort(function(a,b){return a.t-b.t});
+    });
+  }
+  var lastPumped=0;
+  function pumpStats(){
+    if(Date.now()-lastPumped<8000) return; lastPumped=Date.now();
+    parseFeed().then(function(list){ samples=list; renderSpeed(); renderTraffic(); }).catch(function(){});
   }
 
-  $("refresh").addEventListener("click",check);
-  document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
-  check();
-
-  if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("sw.js").catch(function(){});
+  function totalsAt(m){ // returns {name:{rx,tx}} mapped
+    var o={}; (m.peers||[]).forEach(function(p){ var n=PEERS[p.pub]; if(n) o[n]={rx:p.rx,tx:p.tx}; }); return o;
   }
+  function sum(m,field){ var s=0; (m.peers||[]).forEach(function(p){ if(PEERS[p.pub]) s+=p[field]; }); return s; }
+
+  /* ---------- live speed chart ---------- */
+  function renderSpeed(){
+    // build throughput points from consecutive samples
+    var pts=[]; // {t, mbps, dn, up}
+    for(var i=1;i<samples.length;i++){
+      var a=samples[i-1], b=samples[i], dt=b.t-a.t; if(dt<=0) continue;
+      var drx=Math.max(0,sum(b,"rx")-sum(a,"rx")), dtx=Math.max(0,sum(b,"tx")-sum(a,"tx"));
+      var mbps=((drx+dtx)*8/dt)/1e6;
+      pts.push({t:b.t, mbps:mbps, dn:dtx/dt, up:drx/dt});
+    }
+    var last=pts[pts.length-1]||{mbps:0,dn:0,up:0};
+    $("spdNow").textContent=last.mbps.toFixed(last.mbps<10?2:1);
+    $("spdDn").textContent=fmtBytes(last.dn)+"/s"; $("spdUp").textContent=fmtBytes(last.up)+"/s";
+    // draw
+    var W=320,H=120,pad=6; var win=pts.slice(-40); var svg=$("spdChart");
+    if(win.length<2){ svg.innerHTML='<text x="160" y="64" fill="#5c6b8a" font-size="12" text-anchor="middle">waiting for traffic…</text>'; return; }
+    var max=Math.max.apply(null,win.map(function(p){return p.mbps})); if(max<=0)max=1;
+    var xs=function(i){return pad+i*(W-2*pad)/(win.length-1)};
+    var ys=function(v){return H-pad-(v/max)*(H-2*pad)};
+    var line=win.map(function(p,i){return (i?"L":"M")+xs(i).toFixed(1)+" "+ys(p.mbps).toFixed(1)}).join(" ");
+    var area=line+" L"+xs(win.length-1).toFixed(1)+" "+(H-pad)+" L"+xs(0).toFixed(1)+" "+(H-pad)+" Z";
+    svg.innerHTML=
+      '<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0" stop-color="#22d3ee" stop-opacity="0.35"/><stop offset="1" stop-color="#10b981" stop-opacity="0.02"/></linearGradient>'+
+      '<linearGradient id="lg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#10b981"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>'+
+      '<path d="'+area+'" fill="url(#ag)"/>'+
+      '<path d="'+line+'" fill="none" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<circle cx="'+xs(win.length-1).toFixed(1)+'" cy="'+ys(win[win.length-1].mbps).toFixed(1)+'" r="3.5" fill="#22d3ee"/>';
+  }
+
+  /* ---------- traffic per profile ---------- */
+  function renderTraffic(){
+    if(!samples.length){ $("pfCard").innerHTML='<div class="sub">No data yet — connect a device and it appears here.</div>'; return; }
+    var latest=totalsAt(samples[samples.length-1]);
+    var rows=ORDER.map(function(n){ var d=latest[n]||{rx:0,tx:0}; return {n:n, bytes:d.rx+d.tx, rx:d.rx, tx:d.tx}; });
+    var max=Math.max.apply(null,rows.map(function(r){return r.bytes})); if(max<=0)max=1;
+    $("pfCard").innerHTML=rows.map(function(r){
+      return '<div class="pf"><div class="t"><span>'+r.n+'</span><span class="val">'+fmtBytes(r.bytes)+'</span></div>'+
+        '<div class="bar"><i style="width:'+Math.max(2,r.bytes/max*100).toFixed(1)+'%"></i></div></div>';
+    }).join("")+
+    '<div class="row" style="border-top:1px solid var(--line);margin-top:10px"><span class="k">Total</span><span class="v">'+
+      fmtBytes(rows.reduce(function(s,r){return s+r.bytes},0))+'</span></div>';
+  }
+  $("csvBtn").onclick=function(){
+    var head="time_utc,"+ORDER.map(function(n){return '"'+n+' down(B)","'+n+' up(B)"'}).join(",")+"\n";
+    var body=samples.map(function(m){ var t=totalsAt(m); return new Date(m.t*1000).toISOString()+","+ORDER.map(function(n){var d=t[n]||{rx:0,tx:0};return d.tx+","+d.rx}).join(","); }).join("\n");
+    var blob=new Blob([head+body],{type:"text/csv"}); var a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="asher-vpn-traffic.csv"; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+  };
+
+  /* ---------- profiles (decrypt + QR + download) ---------- */
+  var SKEY="asher_pass";
+  function b64ToBuf(b){ var s=atob(b),u=new Uint8Array(s.length); for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i); return u; }
+  function unlock(pass){
+    return fetch("profiles.enc.json",{cache:"no-store"}).then(function(r){return r.json()}).then(function(enc){
+      var salt=b64ToBuf(enc.salt);
+      return crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]).then(function(km){
+        return crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:enc.iterations,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+      }).then(function(key){
+        return Promise.all(enc.items.map(function(it){
+          return crypto.subtle.decrypt({name:"AES-GCM",iv:b64ToBuf(it.iv)},key,b64ToBuf(it.ct))
+            .then(function(pt){ return {name:it.name, conf:new TextDecoder().decode(pt)}; });
+        }));
+      });
+    });
+  }
+  function showProfiles(list){
+    $("lockCard").classList.add("hide");
+    var roles={"APN 1":"your iPhone","APN 2":"your laptop","APN 3":"family / device 3","APN 4":"family / device 4"};
+    $("pfList").innerHTML=list.map(function(p,i){
+      return '<div class="card" style="margin-top:12px"><div class="row" style="border:0;padding:0 0 6px"><span class="v" style="font-size:16px">'+p.name+'</span><span class="k">'+(roles[p.name]||"")+'</span></div>'+
+        '<div class="qrbox" id="qr'+i+'"></div>'+
+        '<button class="btn g sm" data-dl="'+i+'">Download .conf</button></div>';
+    }).join("");
+    list.forEach(function(p,i){ try{ new QRCode($("qr"+i),{text:p.conf,width:170,height:170,correctLevel:QRCode.CorrectLevel.M}); }catch(e){ $("qr"+i).textContent="QR error"; } });
+    $("pfList").querySelectorAll("[data-dl]").forEach(function(b){ b.onclick=function(){ var p=list[+b.getAttribute("data-dl")]; var blob=new Blob([p.conf],{type:"text/plain"}); var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=p.name+".conf"; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href)},2000); }; });
+  }
+  function doUnlock(pass,remember){
+    $("lockErr").textContent="Unlocking…";
+    unlock(pass).then(function(list){ if(remember){try{localStorage.setItem(SKEY,pass)}catch(e){}} showProfiles(list); })
+      .catch(function(){ $("lockErr").textContent="Wrong passphrase (or the profiles file couldn't be read)."; try{localStorage.removeItem(SKEY)}catch(e){} });
+  }
+  $("unlockBtn").onclick=function(){ doUnlock($("passIn").value, $("remember").checked); };
+  $("passIn").addEventListener("keydown",function(e){ if(e.key==="Enter") $("unlockBtn").click(); });
+  (function(){ var s=null; try{s=localStorage.getItem(SKEY)}catch(e){} if(s){ $("remember").checked=true; doUnlock(s,true); } })();
+
+  /* ---------- boot ---------- */
+  check(); pumpStats();
+  setInterval(function(){ if(!document.hidden){ pumpStats(); } }, 30000);
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
 })();
 </script>
 </body>
