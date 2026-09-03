@@ -176,6 +176,15 @@ Connect with:
 
 ## Gotchas already hit
 
+- **Console "Run command" agent does not execute on the E2.1.Micro (2026-09-03).**
+  The Compute Instance Run Command plugin showed *Enabled*, delivery *Visible*,
+  execution stuck at *Accepted* with a blank exit code - twice, including after a
+  reboot. The instance never ran the script. cloud-init is a separate mechanism
+  (runs at first boot, no agent), so the reliable phone-only path is to launch
+  with cloud-init instead of relying on Run command. `oracle/cloudshell-phase0.sh`
+  does exactly that from Cloud Shell in one command, and the mobile "Create
+  instance" wizard has no cloud-init field (only the desktop form does).
+
 - `cloudshell-launch-retry.sh` printed `${SLEEP}` in its startup banner, but no
   `SLEEP` variable was ever assigned — only `BASE`. The script runs under
   `set -u`, so that line aborted it with `SLEEP: unbound variable` **before the
