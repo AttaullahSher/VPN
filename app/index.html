@@ -7,7 +7,8 @@
 <meta name="description" content="Asher VPN — your private WireGuard tunnel status.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0e1627">
-<!-- iOS home-screen app -->
+<!-- home-screen app -->
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Asher VPN">
@@ -125,9 +126,12 @@
     var m=(h+"&"+q).match(/server=([0-9.]+)/);
     return m?m[1]:null;
   }
+  // Fallback so the home-screen app works even in iOS's separate PWA storage
+  // sandbox (where a #server= hash / Safari localStorage isn't visible).
+  var DEFAULT_SERVER="51.170.95.199";
   var fromUrl=paramServer();
   if(fromUrl){try{localStorage.setItem(SERVER_KEY,fromUrl)}catch(e){}}
-  var server=fromUrl||(function(){try{return localStorage.getItem(SERVER_KEY)}catch(e){return null}})();
+  var server=fromUrl||(function(){try{return localStorage.getItem(SERVER_KEY)}catch(e){return null}})()||DEFAULT_SERVER;
 
   var $=function(id){return document.getElementById(id)};
   $("srv").textContent=server||"not set";
