@@ -4,3 +4,6 @@ peers/
 *.conf
 !examples/*.conf
 *.png
+
+# App icons are safe to publish (branding, no secrets).
+!app/icon-*.png
