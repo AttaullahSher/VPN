@@ -200,6 +200,7 @@
     "LqZ1PXCOGbeiiEySRTTiZt3jj0xybHWfjDQYbhk3WSg=":"APN 4"
   };
   var ORDER=["APN 1","APN 2","APN 3","APN 4"];
+  var UNLOCKED=false;
   var $=function(id){return document.getElementById(id)};
 
   /* ---------- view switching ---------- */
@@ -302,11 +303,17 @@
     '<div class="row" style="border-top:1px solid var(--line);margin-top:10px"><span class="k">Total</span><span class="v">'+
       fmtBytes(rows.reduce(function(s,r){return s+r.bytes},0))+'</span></div>';
   }
-  $("csvBtn").onclick=function(){
+  function doCsv(){
     var head="time_utc,"+ORDER.map(function(n){return '"'+n+' down(B)","'+n+' up(B)"'}).join(",")+"\n";
     var body=samples.map(function(m){ var t=totalsAt(m); return new Date(m.t*1000).toISOString()+","+ORDER.map(function(n){var d=t[n]||{rx:0,tx:0};return d.tx+","+d.rx}).join(","); }).join("\n");
     var blob=new Blob([head+body],{type:"text/csv"}); var a=document.createElement("a");
     a.href=URL.createObjectURL(blob); a.download="asher-vpn-traffic.csv"; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+  }
+  $("csvBtn").onclick=function(){
+    if(UNLOCKED){ doCsv(); return; }
+    var pin=prompt("Enter your passphrase to download the traffic CSV:");
+    if(pin==null||pin==="") return;
+    unlock(pin).then(function(){ UNLOCKED=true; doCsv(); }).catch(function(){ alert("Wrong passphrase."); });
   };
 
   /* ---------- profiles (decrypt + QR + download) ---------- */
@@ -338,7 +345,7 @@
   }
   function doUnlock(pass,remember){
     $("lockErr").textContent="Unlocking…";
-    unlock(pass).then(function(list){ if(remember){try{localStorage.setItem(SKEY,pass)}catch(e){}} showProfiles(list); })
+    unlock(pass).then(function(list){ if(remember){try{localStorage.setItem(SKEY,pass)}catch(e){}} UNLOCKED=true; showProfiles(list); })
       .catch(function(){ $("lockErr").textContent="Wrong passphrase (or the profiles file couldn't be read)."; try{localStorage.removeItem(SKEY)}catch(e){} });
   }
   $("unlockBtn").onclick=function(){ doUnlock($("passIn").value, $("remember").checked); };
