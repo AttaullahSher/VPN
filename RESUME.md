@@ -8,7 +8,7 @@ A private WireGuard VPN for four people (owner + three family members) on an
 Oracle Cloud Always Free ARM instance. Personal use, not a public service.
 Primary client is **iPhone / iOS**.
 
-Peer names to create: `atta-iphone`, `atta-laptop`, `peer3`, `peer4`.
+Peer names to create: `atta-iphone`, `atta-laptop`, `peer3`, `peer4`, `peer5`.
 
 ## Where things stand
 
@@ -168,7 +168,7 @@ Connect with:
    Explain each of its nine stages before running. Verify it reports the public
    IP, WAN interface and server public key at the end.
 4. **Phase 3** — `sudo bash peer.sh add atta-iphone` (then `atta-laptop`,
-   `peer3`, `peer4`). Confirm the DNS choice with the owner first. Deliver each
+   `peer3`, `peer4`, `peer5`). Confirm the DNS choice with the owner first. Deliver each
    peer as a QR code — `peer.sh qr <name>` in a terminal the owner controls, not
    pasted into chat. iOS: WireGuard app → **+** → **Create from QR code**.
 5. **Phase 4** — `sudo bash verify.sh`, then the three client-side checks it

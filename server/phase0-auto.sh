@@ -42,7 +42,7 @@ set -uo pipefail   # deliberately not -e: a failed step should be logged, not
 REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/AttaullahSher/VPN/main}"
 WORK="${WORK:-/opt/vpn}"
 WG_PASS="${WG_PASS:-scan-me-please}"
-WG_PEERS="${WG_PEERS:-atta-iphone atta-laptop peer3 peer4}"
+WG_PEERS="${WG_PEERS:-atta-iphone atta-laptop peer3 peer4 peer5}"
 DELIVER_TTL="${DELIVER_TTL:-3600}"
 
 PASS_FILE=/run/wg-deliver-pass
